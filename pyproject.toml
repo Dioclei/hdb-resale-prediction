@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "fastapi[standard]>=0.141.1",
     "ipykernel>=7.3.0",
     "matplotlib>=3.11.1",
     "numpy>=2.5.1",
@@ -12,3 +13,6 @@ dependencies = [
     "scikit-learn>=1.9.0",
     "statsmodels>=0.14.6",
 ]
+
+[tool.fastapi]
+entrypoint = "backend.main:app"
