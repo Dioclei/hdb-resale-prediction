@@ -1,3 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend"]
+
 [project]
 name = "hdb-resale-prediction"
 version = "0.1.0"
@@ -10,9 +17,13 @@ dependencies = [
     "matplotlib>=3.11.1",
     "numpy>=2.5.1",
     "pandas>=3.0.3",
+    "pytest>=9.1.1",
     "scikit-learn>=1.9.0",
     "statsmodels>=0.14.6",
 ]
 
 [tool.fastapi]
 entrypoint = "backend.main:app"
+
+[pytest]
+addopts = ["--import-mode=importlib"]
