@@ -1,3 +1,4 @@
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -12,6 +13,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import validate_data
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.exceptions import NotFittedError
+from sklearn.metrics import r2_score, root_mean_squared_error
 
 
 class RegdateMonthsEncoder(TransformerMixin, BaseEstimator):
@@ -117,6 +119,7 @@ class LinearRegressionModel:
 
     def __init__(self):
         # initialize feature engineering pipeline
+        self.model = LinearRegression(fit_intercept=True)
         self.ct = ColumnTransformer([
             ("regdate_months", RegdateMonthsEncoder(), ["date"]),
             ("ohe town flat_type", CategoricalInteractionEncoder(drop="first", handle_unknown="ignore"), ["town", "flat_type"]),
@@ -127,21 +130,53 @@ class LinearRegressionModel:
         # initialize inference pipeline
         self.pipeline = Pipeline([
             ("features", self.ct),
-            ("model", LinearRegression(fit_intercept=True)),
+            ("model", self.model),
         ])
 
     ### Training Setup ###
 
-    def import_data_and_train_model(self):
+    def import_data_and_train_model(self, do_train_test_split=False, save_train_test=False):
         # TODO: replace with API call to data.gov
         resale_data_path = Path() / "data" / "resale_flat_prices_20260720.csv" # update path as necessary
         ResalePrices = pd.read_csv(resale_data_path)
 
         # prepare training data and create model
         ResalePrices = self.preprocess_data(ResalePrices)
-        y_train = self.get_target(ResalePrices)
-        X_train = ResalePrices[['date', 'town', 'flat_type', 'floor_area_sqm']] # raw data, features are automatically computed by the pipeline
-        self.pipeline.fit(X_train, y_train)
+
+        # train with only 80% of the data and show model evaluation with R^2 and RMSE
+        if do_train_test_split:
+            cutoff_date = ResalePrices.iloc[int(ResalePrices.shape[0] * 0.8)]['date']
+            ResalePrices_Train = ResalePrices[ResalePrices['date'] <= cutoff_date]
+            ResalePrices_Test = ResalePrices[ResalePrices['date'] > cutoff_date]
+
+            y_train = self.get_target(ResalePrices_Train)
+            X_train = ResalePrices_Train[['date', 'town', 'flat_type', 'floor_area_sqm']] # raw data, features are automatically computed by the pipeline
+            y_test = self.get_target(ResalePrices_Test)
+            X_test = ResalePrices_Test[['date', 'town', 'flat_type', 'floor_area_sqm']]
+
+            self.pipeline.fit(X_train, y_train)  
+
+            if save_train_test:
+                now = datetime.now().strftime("%Y%m%d_%H%M%S")
+                cwd = Path(__file__).resolve().parent
+                self.get_features(X_train).to_csv(cwd / "features" / f"{now}_train.csv", index=False)
+                self.get_features(X_test).to_csv(cwd / "features" / f"{now}_test.csv", index=False)
+                y_train.to_csv(cwd / "features" / f"{now}_target.csv", index=False)
+
+            y_pred_train = self.predict(X_train)
+            y_pred_test = self.predict(X_test)
+            print("Train R^2: ", r2_score(y_train, y_pred_train))
+            print("Test R^2: ", r2_score(y_test, y_pred_test))
+            print("Test RMSE: ", root_mean_squared_error(y_test, y_pred_test))
+            print("Weights:", self.model.coef_)
+            print("Intercept:", self.model.intercept_)
+
+        # train with all of the data for production
+        else:
+            y_train = self.get_target(ResalePrices)
+            X_train = ResalePrices[['date', 'town', 'flat_type', 'floor_area_sqm']]
+
+            self.pipeline.fit(X_train, y_train)        
 
     def predict(self, df):
         return self.pipeline.predict(df)
@@ -190,7 +225,7 @@ class LinearRegressionModel:
         if 'resale_price' not in df.columns:
             raise ValueError("Expected column 'resale_price' in DataFrame")
 
-        return df['resale_price']
+        return np.log(df['resale_price'])
 
     def fit(self, train, y):
         # fits the feature engineering and prediction pipeline to training data
@@ -204,3 +239,30 @@ class LinearRegressionModel:
         """
         data = self.ct.transform(df)
         return pd.DataFrame(data, columns=self.ct.get_feature_names_out())
+
+
+    ### Internal Testing ###
+
+    # for comparing with notebook model
+    def compare_data(csv_path1, csv_path2):
+        df1 = pd.read_csv(csv_path1)
+        df2 = pd.read_csv(csv_path2)
+        print(df1.shape)
+        print(df2.shape)
+        print(df1.iloc[10353, :].to_string())
+        print(df2.iloc[10353, :].to_string())
+
+lr = LinearRegressionModel()
+lr.import_data_and_train_model()
+
+
+
+
+
+
+### Internal Testing ###
+
+# csv_path1 = Path(__file__).resolve().parent / "features" / "20260811_173226_train.csv"
+# csv_path2 = Path(__file__).resolve().parents[2] / "notebooks" / "features" / "20260811_170852_train.csv"
+# compare_data(csv_path1=csv_path1, csv_path2=csv_path2)
+
