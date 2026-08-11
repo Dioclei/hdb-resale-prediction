@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Temporary Data Files
+src/backend/features/
+notebooks/features/
