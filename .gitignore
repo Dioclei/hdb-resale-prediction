@@ -12,3 +12,6 @@ wheels/
 # Temporary Data Files
 src/backend/features/
 notebooks/features/
+
+# Model Saves
+src/backend/model/

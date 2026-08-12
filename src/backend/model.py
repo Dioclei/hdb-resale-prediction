@@ -1,4 +1,5 @@
 from datetime import datetime
+import pickle
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -118,20 +119,32 @@ class LinearRegressionModel:
     """
 
     def __init__(self):
-        # initialize feature engineering pipeline
-        self.model = LinearRegression(fit_intercept=True)
-        self.ct = ColumnTransformer([
-            ("regdate_months", RegdateMonthsEncoder(), ["date"]),
-            ("ohe town flat_type", CategoricalInteractionEncoder(drop="first", handle_unknown="ignore"), ["town", "flat_type"]),
-            ("log_floor_area_sqm", 
-             FunctionTransformer(func=np.log, feature_names_out=lambda transformer, input_features: [f"{s} (log)" for s in input_features]),
-             ["floor_area_sqm"]),
-        ], remainder="drop")
-        # initialize inference pipeline
-        self.pipeline = Pipeline([
-            ("features", self.ct),
-            ("model", self.model),
-        ])
+        try:
+            # load model from save, if possible
+            model_folder = Path(__file__).resolve().parent / "model"
+            model_folder.mkdir(parents=True, exist_ok=True)
+            with open(model_folder / "model.pkl", "rb") as file:
+                self.model = pickle.load(file)
+            with open(model_folder / "ct.pkl", "rb") as file:
+                self.ct = pickle.load(file)
+            with open(model_folder / "pipeline.pkl", "rb") as file:
+                self.pipeline = pickle.load(file)
+            print("LinearRegressionModel: Previously saved model found and loaded!")
+        except FileNotFoundError as e:
+            # create an empty model, to be fitted later
+            self.model = LinearRegression(fit_intercept=True)
+            self.ct = ColumnTransformer([
+                ("regdate_months", RegdateMonthsEncoder(), ["date"]),
+                ("ohe town flat_type", CategoricalInteractionEncoder(drop="first", handle_unknown="ignore"), ["town", "flat_type"]),
+                ("log_floor_area_sqm", 
+                FunctionTransformer(func=np.log, feature_names_out=self.get_feature_names_out_log),
+                ["floor_area_sqm"]),
+            ], remainder="drop")
+            self.pipeline = Pipeline([
+                ("features", self.ct),
+                ("model", self.model),
+            ])
+            print("LinearRegressionModel: Model ready for training.")
 
     ### Training Setup ###
 
@@ -176,7 +189,17 @@ class LinearRegressionModel:
             y_train = self.get_target(ResalePrices)
             X_train = ResalePrices[['date', 'town', 'flat_type', 'floor_area_sqm']]
 
-            self.pipeline.fit(X_train, y_train)        
+            self.pipeline.fit(X_train, y_train)
+
+        # save model
+        model_folder = Path(__file__).resolve().parent / "model"
+        model_folder.mkdir(parents=True, exist_ok=True)
+        with open(model_folder / "model.pkl", "wb") as file:
+            pickle.dump(self.model, file)
+        with open(model_folder / "ct.pkl", "wb") as file:
+            pickle.dump(self.ct, file)
+        with open(model_folder / "pipeline.pkl", "wb") as file:
+            pickle.dump(self.pipeline, file)
 
     def predict(self, df):
         return self.pipeline.predict(df)
@@ -226,6 +249,9 @@ class LinearRegressionModel:
             raise ValueError("Expected column 'resale_price' in DataFrame")
 
         return np.log(df['resale_price'])
+
+    def get_feature_names_out_log(self, transformer, input_features=None):
+        return [f"{s} (log)" for s in input_features]
 
     def fit(self, train, y):
         # fits the feature engineering and prediction pipeline to training data
