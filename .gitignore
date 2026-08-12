@@ -15,3 +15,6 @@ notebooks/features/
 
 # Model Saves
 src/backend/model/
+
+# Logs
+logs/

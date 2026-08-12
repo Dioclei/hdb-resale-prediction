@@ -1,5 +1,7 @@
 from datetime import datetime
 import pickle
+import logging
+
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -16,6 +18,7 @@ from sklearn.utils.estimator_checks import check_estimator
 from sklearn.exceptions import NotFittedError
 from sklearn.metrics import r2_score, root_mean_squared_error
 
+logger = logging.getLogger("LinearRegressionModel")
 
 class RegdateMonthsEncoder(TransformerMixin, BaseEstimator):
     """
@@ -129,7 +132,7 @@ class LinearRegressionModel:
                 self.ct = pickle.load(file)
             with open(model_folder / "pipeline.pkl", "rb") as file:
                 self.pipeline = pickle.load(file)
-            print("LinearRegressionModel: Previously saved model found and loaded!")
+            logger.info("Previously saved model found and loaded!")
         except FileNotFoundError as e:
             # create an empty model, to be fitted later
             self.model = LinearRegression(fit_intercept=True)
@@ -144,7 +147,7 @@ class LinearRegressionModel:
                 ("features", self.ct),
                 ("model", self.model),
             ])
-            print("LinearRegressionModel: Model ready for training.")
+            logger.info("Model ready for training.")
 
     ### Training Setup ###
 
@@ -167,7 +170,10 @@ class LinearRegressionModel:
             y_test = self.get_target(ResalePrices_Test)
             X_test = ResalePrices_Test[['date', 'town', 'flat_type', 'floor_area_sqm']]
 
+            logger.info(f"Training model on X_train of shape {X_train.shape} and testing against X_test of shape {X_test.shape}.",
+                        extra={"X_train_shape": X_train.shape, "X_test_shape": X_test.shape})
             self.pipeline.fit(X_train, y_train)  
+            logger.info("Successfully trained model.")
 
             if save_train_test:
                 now = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -178,18 +184,30 @@ class LinearRegressionModel:
 
             y_pred_train = self.predict(X_train)
             y_pred_test = self.predict(X_test)
-            print("Train R^2: ", r2_score(y_train, y_pred_train))
-            print("Test R^2: ", r2_score(y_test, y_pred_test))
-            print("Test RMSE: ", root_mean_squared_error(y_test, y_pred_test))
-            print("Weights:", self.model.coef_)
-            print("Intercept:", self.model.intercept_)
+
+            # evaluation
+            train_r2 = r2_score(y_train, y_pred_train)
+            test_r2 = r2_score(y_test, y_pred_test)
+            rmse = root_mean_squared_error(y_test, y_pred_test)
+            weights = self.model.coef_
+            intercept = self.model.intercept_
+
+            logger.info(f"Model results: train R^2: {train_r2}, test R^2: {test_r2}, RMSE: {rmse}", extra={
+                "train_r2": train_r2,
+                "test_r2": test_r2,
+                "rmse": rmse,
+                "weights": weights,
+                "intercept": intercept,
+            })
 
         # train with all of the data for production
         else:
             y_train = self.get_target(ResalePrices)
             X_train = ResalePrices[['date', 'town', 'flat_type', 'floor_area_sqm']]
 
+            logger.info(f"Training model on X_train of shape {X_train.shape}.", extra={"X_train_shape": X_train.shape})
             self.pipeline.fit(X_train, y_train)
+            logger.info("Successfully trained model.")
 
         # save model
         model_folder = Path(__file__).resolve().parent / "model"
@@ -200,6 +218,7 @@ class LinearRegressionModel:
             pickle.dump(self.ct, file)
         with open(model_folder / "pipeline.pkl", "wb") as file:
             pickle.dump(self.pipeline, file)
+        logger.info(f"Model saved to {model_folder}.")
 
     def predict(self, df):
         return self.pipeline.predict(df)
