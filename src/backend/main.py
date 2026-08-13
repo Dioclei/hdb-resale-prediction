@@ -4,7 +4,7 @@ import datetime as dt
 from enum import Enum
 import random
 from fastapi import FastAPI, Query, Path, Body
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal, Annotated
 
 from backend.model import LinearRegressionModel
@@ -71,7 +71,7 @@ class FlatTypeName(str, Enum):
 
 class InferenceInput_LinearRegressionModel(BaseModel):
     date: dt.datetime
-    floor_area_sqm: float
+    floor_area_sqm: float = Field(gt=0, lt=2000) # largest floor_area_sqm is ~350 in training data
     town: TownName
     flat_type: FlatTypeName
 
