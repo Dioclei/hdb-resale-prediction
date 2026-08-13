@@ -94,21 +94,19 @@ async def get_inference(
         "town": input_features.town,
         "flat_type": input_features.flat_type,
     })
-    output = lr.predict(
+    resale_price_pred = lr.predict(
         date=input_features.date,
         floor_area_sqm=input_features.floor_area_sqm,
         flat_type=input_features.flat_type, 
         town=input_features.town
     )
-    logger.info("Inference output", extra={
+    logger.info(f"Inference output: {resale_price_pred}", extra={
         "request_id": req_id,
-        "output": output,
+        "resale_price_pred": resale_price_pred,
     })
 
     return {
         "success": True,
-        "date": input_features.date,
-        "floor_area_sqm": input_features.floor_area_sqm,
-        "town": input_features.town,
-        "flat_type": input_features.flat_type,
+        "input_features": input_features,
+        "resale_price_pred": resale_price_pred,
     }

@@ -228,8 +228,10 @@ class LinearRegressionModel:
         logger.info(f"Model saved to {model_folder}.")
 
     def predict(self, date, floor_area_sqm, town, flat_type):
+        """Returns the model's predicted resale_price given the input features."""
         df = pd.DataFrame([[date, floor_area_sqm, town, flat_type]], columns=["date", "floor_area_sqm", "town", "flat_type"])
-        return self.pipeline.predict(df)
+        out = self.pipeline.predict(df)[0]
+        return np.exp(out)
 
     ### Data Wrangling ###
 
