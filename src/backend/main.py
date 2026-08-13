@@ -79,26 +79,9 @@ class InferenceInput_LinearRegressionModel(BaseModel):
 async def root():
     return {"message": "Hello World"}
 
-# example route: shows how path parameters and query parameters are parsed
-@app.get("/items/{item_id}")
-async def get_item(item_id: int, limit: int, location: str = "Singapore"):
-    logger.info("Received item request", extra={
-        "item_id": item_id,
-        "limit": limit,
-        "location": location
-    })
-    return {
-        "item_id": item_id,
-        "limit": limit,
-        "location": location,
-    }
-
 # model inference
-@app.get("/inference/{model}")
+@app.get("/inference/linear-regression-model")
 async def get_inference(
-    model: Annotated[Literal["linear-regression-model"], Path(
-        title="Linear Regression Model",
-    )],
     input_features: Annotated[InferenceInput_LinearRegressionModel, Query(
         title="Linear Regression Model Input Features",
         description="All features (date, floor_area_sqm, town, flat_type) are required."
