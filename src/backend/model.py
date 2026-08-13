@@ -148,6 +148,7 @@ class LinearRegressionModel:
                 ("model", self.model),
             ])
             logger.info("Model ready for training.")
+            self.import_data_and_train_model()
 
     ### Training Setup ###
 
@@ -206,6 +207,12 @@ class LinearRegressionModel:
             X_train = ResalePrices[['date', 'town', 'flat_type', 'floor_area_sqm']]
 
             logger.info(f"Training model on X_train of shape {X_train.shape}.", extra={"X_train_shape": X_train.shape})
+            logger.debug("Logging unique values for 'town'", extra={"values": X_train['town'].unique().astype(str).tolist()})
+            logger.debug("Logging unique values for 'flat_type'", extra={"values": X_train['flat_type'].unique().astype(str).tolist()})
+            logger.debug(f"Logging minimum date: {X_train['date'].min()}", extra={"value": X_train['date'].min()})
+            logger.debug(f"Logging floor_area_sqm range: {X_train['floor_area_sqm'].min()}-{X_train['floor_area_sqm'].max()}",
+                         extra={"min": X_train['floor_area_sqm'].min(), "max": X_train['floor_area_sqm'].max()})
+
             self.pipeline.fit(X_train, y_train)
             logger.info("Successfully trained model.")
 
@@ -220,7 +227,8 @@ class LinearRegressionModel:
             pickle.dump(self.pipeline, file)
         logger.info(f"Model saved to {model_folder}.")
 
-    def predict(self, df):
+    def predict(self, date, floor_area_sqm, town, flat_type):
+        df = pd.DataFrame([[date, floor_area_sqm, town, flat_type]], columns=["date", "floor_area_sqm", "town", "flat_type"])
         return self.pipeline.predict(df)
 
     ### Data Wrangling ###
@@ -296,14 +304,6 @@ class LinearRegressionModel:
         print(df2.shape)
         print(df1.iloc[10353, :].to_string())
         print(df2.iloc[10353, :].to_string())
-
-lr = LinearRegressionModel()
-lr.import_data_and_train_model()
-
-
-
-
-
 
 ### Internal Testing ###
 
