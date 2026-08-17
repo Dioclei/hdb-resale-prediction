@@ -18,6 +18,8 @@ from sklearn.utils.estimator_checks import check_estimator
 from sklearn.exceptions import NotFittedError
 from sklearn.metrics import r2_score, root_mean_squared_error
 
+from backend.schemas import LinearRegressionModel_Output
+
 logger = logging.getLogger("LinearRegressionModel")
 
 class RegdateMonthsEncoder(TransformerMixin, BaseEstimator):
@@ -231,7 +233,8 @@ class LinearRegressionModel:
         """Returns the model's predicted resale_price given the input features."""
         df = pd.DataFrame([[date, floor_area_sqm, town, flat_type]], columns=["date", "floor_area_sqm", "town", "flat_type"])
         out = self.pipeline.predict(df)[0]
-        return np.exp(out)
+        resale_price = np.exp(out)
+        return LinearRegressionModel_Output(resale_price=resale_price)
 
     ### Data Wrangling ###
 

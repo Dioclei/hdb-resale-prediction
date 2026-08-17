@@ -1,14 +1,13 @@
 import atexit
 import logging
 import datetime as dt
-from enum import Enum
 import random
-from fastapi import FastAPI, Query, Path, Body
-from pydantic import BaseModel, Field
-from typing import Literal, Annotated
+from fastapi import FastAPI, Query
+from typing import Annotated
 
 from backend.model import LinearRegressionModel
 from backend.config.logging_config import LOGGING_CONFIG
+from backend.schemas import LinearRegressionModel_Input
 
 # Set up logging and log queue handler process
 def setup_logging():
@@ -32,49 +31,6 @@ def get_request_id():
     randint = random.randint(1, 99999999)
     return f"R-{randint}"
 
-class TownName(str, Enum):
-    ANG_MO_KIO = "ANG MO KIO"
-    BEDOK = "BEDOK"
-    BISHAN = "BISHAN"
-    BUKIT_BATOK = "BUKIT BATOK"
-    BUKIT_MERAH = "BUKIT MERAH"
-    BUKIT_PANJANG = "BUKIT PANJANG"
-    BUKIT_TIMAH = "BUKIT TIMAH"
-    CENTRAL_AREA = "CENTRAL AREA"
-    CHOA_CHU_KANG = "CHOA CHU KANG"
-    CLEMENTI = "CLEMENTI"
-    GEYLANG = "GEYLANG"
-    HOUGANG = "HOUGANG"
-    JURONG_EAST = "JURONG EAST"
-    JURONG_WEST = "JURONG WEST"
-    KALLANG_WHAMPOA = "KALLANG/WHAMPOA"
-    MARINE_PARADE = "MARINE PARADE"
-    PASIR_RIS = "PASIR RIS"
-    PUNGGOL = "PUNGGOL"
-    QUEENSTOWN = "QUEENSTOWN"
-    SEMBAWANG = "SEMBAWANG"
-    SENGKANG = "SENGKANG"
-    SERANGOON = "SERANGOON"
-    TAMPINES = "TAMPINES"
-    TOA_PAYOH = "TOA PAYOH"
-    WOODLANDS = "WOODLANDS"
-    YISHUN = "YISHUN"
-
-class FlatTypeName(str, Enum):
-    ROOM_1 = "1 ROOM"
-    ROOM_2 = "2 ROOM"
-    ROOM_3 = "3 ROOM"
-    ROOM_4 = "4 ROOM"
-    ROOM_5 = "5 ROOM"
-    EXECUTIVE = "EXECUTIVE"
-    MULTI_GENERATION = "MULTI-GENERATION"
-
-class InferenceInput_LinearRegressionModel(BaseModel):
-    date: dt.datetime
-    floor_area_sqm: float = Field(gt=0, lt=2000) # largest floor_area_sqm is ~350 in training data
-    town: TownName
-    flat_type: FlatTypeName
-
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
@@ -82,7 +38,7 @@ async def root():
 # model inference
 @app.get("/inference/linear-regression-model")
 async def get_inference(
-    input_features: Annotated[InferenceInput_LinearRegressionModel, Query(
+    input_features: Annotated[LinearRegressionModel_Input, Query(
         title="Linear Regression Model Input Features",
         description="All features (date, floor_area_sqm, town, flat_type) are required."
     )]):
@@ -94,16 +50,19 @@ async def get_inference(
         "town": input_features.town,
         "flat_type": input_features.flat_type,
     })
-    resale_price_pred = lr.predict(
+    prediction = lr.predict(
         date=input_features.date,
         floor_area_sqm=input_features.floor_area_sqm,
         flat_type=input_features.flat_type, 
         town=input_features.town
     )
-    logger.info(f"Inference output: {resale_price_pred}", extra={
+    logger.info(f"Inference output: {prediction.resale_price}", extra={
         "request_id": req_id,
-        "resale_price_pred": resale_price_pred,
+        "resale_price_pred": prediction.resale_price,
     })
+
+    # round output to 2 decimal places
+    resale_price_pred = round(prediction.resale_price, 2)
 
     return {
         "success": True,
