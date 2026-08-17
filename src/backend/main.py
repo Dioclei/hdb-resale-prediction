@@ -1,6 +1,5 @@
 import atexit
 import logging
-import datetime as dt
 import random
 from fastapi import FastAPI, Query
 from typing import Annotated

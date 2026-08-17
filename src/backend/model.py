@@ -4,19 +4,14 @@ import logging
 
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import root_mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, FunctionTransformer, OneHotEncoder, PolynomialFeatures
+from sklearn.preprocessing import FunctionTransformer, OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import validate_data
-from sklearn.utils.estimator_checks import check_estimator
-from sklearn.exceptions import NotFittedError
-from sklearn.metrics import r2_score, root_mean_squared_error
 
 from backend.schemas import LinearRegressionModel_Output
 
