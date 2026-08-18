@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from backend.model import LinearRegressionModel
 from backend.config.logging_config import LOGGING_CONFIG
 from backend.schemas import LinearRegressionModel_Input
-from backend.database import setup_db
+from backend.database import db
 
 def get_request_id():
     # there will be collisions but it should be very rare for simple debugging purposes.
@@ -32,12 +32,15 @@ async def lifespan(app: FastAPI):
     app.state.lr = LinearRegressionModel()
 
     # Set up database
-    setup_db()
+    db.setup_db()
 
     yield
 
     # FastAPI App Shutdown
     
+    # Shut down database
+    db.shutdown()
+
     # Shut down logging queue handler process
     if queue_handler is not None:
         queue_handler.listener.stop()
