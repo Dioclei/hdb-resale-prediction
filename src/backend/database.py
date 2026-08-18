@@ -8,7 +8,6 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
-
 load_dotenv()  # reads .env into environment variables
 
 url_object = URL.create(
@@ -54,3 +53,7 @@ class Log(Base):
 def setup_db():
     engine = create_engine(url_object, echo=True)
     Base.metadata.create_all(engine)
+
+def get_url_string():
+    """Returns full URL string, including password"""
+    return url_object.render_as_string(hide_password=False)
