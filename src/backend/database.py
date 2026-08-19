@@ -16,7 +16,7 @@ class Base(DeclarativeBase):
 class ApiRequest(Base):
     __tablename__ = "api_request"
 
-    request_id: Mapped[int] = mapped_column(primary_key=True)
+    request_id: Mapped[str] = mapped_column(String(12), primary_key=True)
     inference: Mapped[Optional[Inference]] = relationship(back_populates="api_request")
 
 # Model Inference input / output
@@ -28,7 +28,7 @@ class Inference(Base):
     model: Mapped[str] = mapped_column(String)
     input: Mapped[dict] = mapped_column(JSONB)
     output: Mapped[dict] = mapped_column(JSONB)
-    api_request_id: Mapped[int] = mapped_column(ForeignKey("api_request.request_id"))
+    api_request_id: Mapped[str] = mapped_column(ForeignKey("api_request.request_id"))
     api_request: Mapped[ApiRequest] = relationship(back_populates="inference")
 
 # Application logs

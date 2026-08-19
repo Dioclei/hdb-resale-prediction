@@ -4,6 +4,7 @@ import random
 from fastapi import FastAPI, Request, Depends, Query
 from typing import Annotated
 from contextlib import asynccontextmanager
+from nanoid import generate
 
 from backend.model import LinearRegressionModel
 from backend.config.logging_config import LOGGING_CONFIG
@@ -11,10 +12,10 @@ from backend.schemas import LinearRegressionModel_Input
 from backend.database import database, get_session
 
 def get_request_id():
-    # there will be collisions but it should be very rare for simple debugging purposes.
-    # if used for more complex purposes, use a better id generation method.
-    randint = random.randint(1, 99999999)
-    return f"R-{randint}"
+    # generates a small id of 10 characters
+    # at 1 id / hour it will need 17k years to have a 1% chance of collision
+    
+    return f"R-{generate(size=10)}" # note: total 12 characters because of prefix
 
 # FastAPI Lifespan
 @asynccontextmanager

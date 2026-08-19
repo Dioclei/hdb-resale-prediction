@@ -16,6 +16,7 @@ dependencies = [
     "fastapi[standard]>=0.141.1,<0.142",
     "ipykernel>=7.3.0",
     "matplotlib>=3.11.1",
+    "nanoid>=2.0.0",
     "numpy>=2.5.1",
     "pandas>=3.0.3",
     "psycopg2>=2.9.12",
