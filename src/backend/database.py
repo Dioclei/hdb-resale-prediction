@@ -1,12 +1,12 @@
 import os
 import functools
-from typing import Optional
+from typing import Optional, Generator
 from dotenv import load_dotenv
 from datetime import datetime
 from sqlalchemy import URL, Engine, create_engine
 from sqlalchemy import DateTime, String, ForeignKey
 from sqlalchemy.sql import func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker, Session
 from sqlalchemy.dialects.postgresql import JSONB
 
 class Base(DeclarativeBase):
@@ -40,21 +40,18 @@ class Log(Base):
     message: Mapped[str] = mapped_column(String)
     extra: Mapped[dict] = mapped_column(JSONB)
 
-class Database():
-    def __init__(self):
-        self.engine: Engine | None = None
-        self.url_object: URL | None = None
-
-    @property
-    def engine_(self) -> Engine:
-        if self.engine is None:
-            raise RuntimeError("Database not initialized, call setup_db() first")
-        return self.engine
+class Database:
+    """Owns the engine, URL config, and session factory for one database connection."""
+ 
+    def __init__(self) -> None:
+        self._url_object: URL | None = None
+        self._engine: Engine | None = None
+        self._session_factory: sessionmaker | None = None
 
     def get_url_object(self) -> URL:
-        if not self.url_object:
-            load_dotenv() # reads .env into os.environ environment variables
-            self.url_object = URL.create(
+        if self._url_object is None:
+            load_dotenv()  # reads .env into os.environ environment variables
+            self._url_object = URL.create(
                 "postgresql+psycopg2",
                 username=os.environ["DB_USER"],
                 password=os.environ["DB_PASSWORD"],
@@ -62,35 +59,43 @@ class Database():
                 port=int(os.environ["DB_PORT"]),
                 database=os.environ["DB_NAME"],
             )
-        return self.url_object
+        return self._url_object
 
-    def get_url_string(self) -> str:
-        """Returns full URL string, including password"""
-        return self.get_url_object().render_as_string(hide_password=False)
+    def get_url_string(self, hide_password=True) -> str:
+        """Returns full URL string, including password. Debug use only — do not log."""
+        return self.get_url_object().render_as_string(hide_password=hide_password)
 
     def setup_db(self) -> None:
-        """Initializes database engine"""
-        if not self.engine:
-            self.engine = create_engine(self.get_url_object(), echo=True)
+        """Initializes the engine and session factory. Safe to call more than once."""
+        if self._engine is not None:
+            return
+        self._engine = create_engine(self.get_url_object(), echo=True)
+        self._session_factory = sessionmaker(
+            bind=self._engine, autoflush=False, autocommit=False
+        )
 
     def shutdown(self) -> None:
-        """Shutdowns database engine and cleans up all database connections"""
-        if self.engine:
-            self.engine.dispose()
+        """Shuts down the engine and cleans up all database connections."""
+        if self._engine is not None:
+            self._engine.dispose()
 
-    @staticmethod
-    def db_query(fn):
-        @functools.wraps(fn)
-        def wrapper(self, *args, **kwargs):
-            if not self.engine:
-                raise RuntimeError("Database not initialized, call setup_db() first")
-            return fn(self, *args, **kwargs)
-        return wrapper
+    def new_session(self) -> Session:
+        if self._session_factory is None:
+            raise RuntimeError("Database not initialized, call setup_db() first")
+        return self._session_factory()
 
-    # example query
-    @db_query
-    def get_data(self, someparam):
-        # do something
-        print(f"hello world! {someparam}")
 
-db = Database()
+# Single shared instance used by the whole app.
+database = Database()
+
+# Module-level export to get a session, for instance in FastAPI routes
+def get_session() -> Generator[Session, None, None]:
+    """FastAPI dependency — yields a Session scoped to one request."""
+    session = database.new_session()
+    try:
+        yield session
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
