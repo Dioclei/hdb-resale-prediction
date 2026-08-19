@@ -36,3 +36,6 @@ class FlatType(str, Enum):
     ROOM_5 = "5 ROOM"
     EXECUTIVE = "EXECUTIVE"
     MULTI_GENERATION = "MULTI-GENERATION"
+
+class Model(str, Enum):
+    LinearRegression = "LinearRegression"

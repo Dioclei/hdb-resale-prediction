@@ -8,8 +8,9 @@ from nanoid import generate
 
 from backend.model import LinearRegressionModel
 from backend.config.logging_config import LOGGING_CONFIG
-from backend.schemas import LinearRegressionModel_Input
-from backend.database import database, get_session
+from backend.schemas import LinearRegressionModel_Input, LinearRegressionModel_Output
+from backend.database import database, get_session, Inference, ApiRequest
+from backend.enums import Model
 
 def get_request_id():
     # generates a small id of 10 characters
@@ -79,7 +80,7 @@ async def get_inference(
         "town": input_features.town,
         "flat_type": input_features.flat_type,
     })
-    prediction = lr.predict(
+    prediction: LinearRegressionModel_Output = lr.predict(
         date=input_features.date,
         floor_area_sqm=input_features.floor_area_sqm,
         flat_type=input_features.flat_type, 
@@ -89,6 +90,18 @@ async def get_inference(
         "request_id": req_id,
         "resale_price_pred": prediction.resale_price,
     })
+
+    # Send inference attempt to database
+    api_req = ApiRequest(request_id=req_id)
+    inference = Inference(
+        model=Model.LinearRegression,
+        input=input_features.model_dump(mode='json'),
+        output=prediction.model_dump(mode='json'),
+        api_request=api_req
+    )
+    session.add(api_req)
+    session.add(inference)
+    session.commit()
 
     # round output to 2 decimal places
     resale_price_pred = round(prediction.resale_price, 2)

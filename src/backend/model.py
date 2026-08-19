@@ -224,7 +224,7 @@ class LinearRegressionModel:
             pickle.dump(self.pipeline, file)
         logger.info(f"Model saved to {model_folder}.")
 
-    def predict(self, date, floor_area_sqm, town, flat_type):
+    def predict(self, date, floor_area_sqm, town, flat_type) -> LinearRegressionModel_Output:
         """Returns the model's predicted resale_price given the input features."""
         df = pd.DataFrame([[date, floor_area_sqm, town, flat_type]], columns=["date", "floor_area_sqm", "town", "flat_type"])
         out = self.pipeline.predict(df)[0]
