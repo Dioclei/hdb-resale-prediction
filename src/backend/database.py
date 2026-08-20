@@ -52,12 +52,12 @@ class Database:
         if self._url_object is None:
             load_dotenv()  # reads .env into os.environ environment variables
             self._url_object = URL.create(
-                "postgresql+psycopg2",
-                username=os.environ["DB_USER"],
-                password=os.environ["DB_PASSWORD"],
-                host=os.environ["DB_HOST"],
-                port=int(os.environ["DB_PORT"]),
-                database=os.environ["DB_NAME"],
+                "postgresql+psycopg",
+                username=os.environ["POSTGRES_USER"],
+                password=os.environ["POSTGRES_PASSWORD"],
+                host=os.environ["POSTGRES_HOST"],
+                port=int(os.environ["POSTGRES_PORT"]),
+                database=os.environ["POSTGRES_DB"],
             )
         return self._url_object
 

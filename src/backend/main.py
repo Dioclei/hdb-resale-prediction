@@ -12,6 +12,8 @@ from backend.schemas import LinearRegressionModel_Input, LinearRegressionModel_O
 from backend.database import database, get_session, Inference, ApiRequest
 from backend.enums import Model
 
+from sqlalchemy import text
+
 def get_request_id():
     # generates a small id of 10 characters
     # at 1 id / hour it will need 17k years to have a 1% chance of collision
@@ -60,6 +62,13 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+@app.get("/health")
+def health(
+    session: Annotated[None, Depends(get_session)]
+):
+    session.execute(text("SELECT 1"))
+    return {"status": "ok"}
 
 # model inference
 @app.get("/inference/linear-regression-model")
