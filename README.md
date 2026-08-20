@@ -7,20 +7,20 @@ To run it without Docker, follow the installation steps below. This project uses
 ```
 uv sync
 
-# Note: the entrypoint for the server is defined in pyproject.toml
+# Note: the entrypoint (for fastapi) for the server is defined in pyproject.toml
 uv run fastapi dev
 ```
 
 
 ## Running the Docker container
-```
-docker build -t hdb-resale-prediction .
-```
-Note that `0.0.0.0` is for deployments available to the public.
-
-To run the container on localhost (for local development only), use `127.0.0.1` instead of `0.0.0.0`.
+In the root folder (same directory as `docker-compose.yml`), do
 
 ```
-# for local development only
-docker run -d -p 127.0.0.1:8000:8000 hdb-resale-prediction
+docker compose up -d --build
 ```
+
+This will launch the docker containers for the `db` (postgres) and `backend`. After it starts up successfully, you can send any API requests via http://localhost:8000/.
+
+For example: http://localhost:8000/inference/linear-regression-model?date=2026-08-13&floor_area_sqm=84&town=YISHUN&flat_type=4%20ROOM
+
+To shut them down do `docker compose down`.
